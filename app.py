@@ -4,7 +4,10 @@ import json
 import re
 import pandas as pd
 import sys
+from dotenv import load_dotenv
 
+dotenv_path = '.env'
+load_dotenv(dotenv_path)
 def get_column_names(schemas, ds_name, sorting_key='column_position'):
     column_details = schemas[ds_name]
     columns = sorted(column_details, key=lambda col: col[sorting_key])
@@ -14,7 +17,7 @@ def read_csv(file, schemas):
     file_path_list = re.split('[/\\\]', file)
     ds_name = file_path_list[-2]
     columns = get_column_names(schemas, ds_name)
-    df_reader = pd.read_csv(file,names=columns,chunksize=1000)
+    df_reader = pd.read_csv(file,names=columns,chunksize=10000)
     return df_reader
 
 def to_sql(df,db_conn_uri,ds_name):
@@ -33,7 +36,7 @@ def db_loader(src_base_dir, db_conn_uri, ds_name):
     for file in files:
         df_reader = read_csv(file, schemas)
         for idx, df in enumerate(df_reader):
-            print(type(df))
+            
             print(f'Populating chunk {idx} of {ds_name}')
             to_sql(df, db_conn_uri, ds_name)
             
@@ -43,7 +46,7 @@ def process_files(ds_names=None):
     db_port = os.environ.get('DB_PORT')##set in .env file
     db_name = os.environ.get('DB_NAME')##set in .env file
     db_user = os.environ.get('DB_USER')##set in .env file
-    db_pass = os.environ.get('DB_PASS')##set in .env file
+    db_pass = os.environ.get('DB_PASSWORD')##set in .env file
     db_conn_uri = f'postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
     schemas = json.load(open(f'{src_base_dir}/schemas.json'))
     if not ds_names:#check if ds_names is None which is default value
@@ -59,7 +62,7 @@ def process_files(ds_names=None):
         except Exception as e:
             print(e)
         finally:
-            print(f'Error processing {ds_name}') 
+            print(f'Data processing of {ds_name} is complete') 
     
 if __name__ == '__main__':
     if len(sys.argv) > 1:
